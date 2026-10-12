@@ -11,7 +11,8 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "CheatSheetMini",
-            dependencies: [.product(name: "Down", package: "Down")]
+            dependencies: [.product(name: "Down", package: "Down")],
+            resources: [.copy("Resources/StatusBarBirdBook.imageset")]
         )
     ]
 )

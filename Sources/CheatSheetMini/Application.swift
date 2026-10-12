@@ -342,6 +342,30 @@ extension Notification.Name {
 private let hotkeySignature: OSType = 0x43534D49 // CSMI
 private var hotkeyHandler: EventHandlerRef?
 
+private func statusBarIcon() -> NSImage? {
+    // SwiftPM's command-line build copies imagesets without compiling an asset
+    // catalog. Load each resolution into one image at an 18-point logical size.
+    // In the packaged app, resources live under Contents/Resources. The generated
+    // SwiftPM accessor only searches the app root and the original build folder.
+    let resourceBundle = Bundle.main.url(forResource: "CheatSheetMini_CheatSheetMini", withExtension: "bundle")
+        .flatMap { Bundle(url: $0) } ?? Bundle.module
+    guard let directory = resourceBundle.url(forResource: "StatusBarBirdBook", withExtension: "imageset") else {
+        return nil
+    }
+    let size = NSSize(width: 18, height: 18)
+    let image = NSImage(size: size)
+    for pixels in [18, 36, 54] {
+        let url = directory.appendingPathComponent("bird-book-\(pixels).png")
+        guard let data = try? Data(contentsOf: url),
+              let representation = NSBitmapImageRep(data: data) else { continue }
+        representation.size = size
+        image.addRepresentation(representation)
+    }
+    guard !image.representations.isEmpty else { return nil }
+    image.isTemplate = true
+    return image
+}
+
 @MainActor final class ApplicationController: NSObject, NSApplicationDelegate {
     private var panel: NSPanel!
     private var statusItem: NSStatusItem!
@@ -363,7 +387,16 @@ private var hotkeyHandler: EventHandlerRef?
         self.panel = panel
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.title = "▤"
+        if let button = statusItem.button {
+            if let image = statusBarIcon() {
+                button.image = image
+                button.imageScaling = .scaleProportionallyDown
+            } else {
+                button.title = "▤"
+            }
+            button.toolTip = "CheatSheet Mini"
+            button.setAccessibilityLabel("CheatSheet Mini")
+        }
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "検索を開く (F1)", action: #selector(togglePanel), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "フォルダを選択", action: #selector(pickFolder), keyEquivalent: ""))
