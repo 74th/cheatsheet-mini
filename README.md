@@ -1,6 +1,8 @@
-# CheatSheet Mini (prototype)
+# CheatSheet Mini
 
 ローカルMarkdownを `##` 見出し単位で検索するmacOSメニューバーアプリです。
+
+<img src="docs/AppIcon.png" width="120" />
 
 ## 必要環境
 
