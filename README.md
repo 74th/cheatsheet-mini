@@ -57,6 +57,11 @@ Xcodeでは `Package.swift` を開き、ソースを閲覧・編集できます�
 - App Sandboxを有効にしていない個人用ビルドを想定しています。選択フォルダはSecurity-Scoped Bookmarkで保持します。
 - Markdown内の生HTMLはDownのデフォルト安全設定に従います。信頼できるローカル文書を対象としてください。
 
+## 仕様と今後の変更
+
+基本仕様は [openspec/specs](openspec/specs/) で管理します。
+仕様の分類、現在の実装との差異、次の変更の進め方は [OpenSpecガイド](openspec/README.md) を参照してください。
+
 ## ライセンス
 
 このプロジェクトの独自コードはMIT License。依存するDown/cmarkには各プロジェクトのライセンスが適用されます。

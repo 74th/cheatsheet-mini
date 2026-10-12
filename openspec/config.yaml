@@ -1,32 +1,27 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  CheatSheet Miniは、個人のローカルMarkdownを##見出し単位で検索・参照する
+  macOS 13以上向けのメニューバー常駐アプリ。
+  Swift 5.9 / SwiftUI / AppKit / Carbon / WKWebViewを使用し、
+  MarkdownのHTML変換にはSwiftPM依存のDownを使用する。
+  現在の実装はSources/CheatSheetMini/main.swiftに集約されている。
+  基本仕様はopenspec/specs/、元仕様との対応・実装差異はopenspec/README.md。
+  基本仕様はxprivate/spec.mdの要件を移行したものであり、
+  全要件の実装・実機検証済みを意味しない。
+  指定フォルダ直下の.mdファイル約200個を想定する。インデックスはメモリ内に
+  保持し、起動時・60分ごと・手動で更新する。F1では更新チェックを行わない。
+  本文全文検索、再帰探索、Markdown編集、DB、クラウド同期は対象外。
+  見た目よりF1からの表示・入力とキーボード操作の速度を優先する。
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
-
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+rules:
+  proposal:
+    - 日本語で記述し、対象capabilityと非目標を明示する。
+    - openspec/README.mdの既知の差異を確認し、既存要件の実装と仕様変更を区別する。
+  specs:
+    - 本文は日本語、構造はOpenSpec形式とし、Requirement / Scenario / SHALL / WHEN / THENを使用する。
+    - 各要件に検証可能なシナリオを含め、必須要件と性能目標・実装上の制約を区別する。
+  design:
+    - F1表示速度、検索構文、更新タイミング、ローカル画像への影響を必要に応じて説明する。
+  tasks:
+    - 変更に応じた検証を含め、実機で未確認の項目を検証済みとして扱わない。
