@@ -4,6 +4,8 @@
 
 <img src="docs/AppIcon.png" width="120" />
 
+<img src="docs/screen-sample.png" width="600" />
+
 ## 必要環境
 
 - macOS 13以上
