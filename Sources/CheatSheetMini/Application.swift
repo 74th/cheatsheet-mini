@@ -317,6 +317,7 @@ struct SearchView: View {
     @State private var selection: String?
     @FocusState private var focused: Bool
     let close: () -> Void
+    let openSettings: () -> Void
     var results: [Entry] { Array(rank(query, entries: store.entries).prefix(120)) }
     var selectedEntry: Entry? { results.first(where: { $0.id == selection }) ?? results.first }
 
@@ -354,8 +355,8 @@ struct SearchView: View {
                 Spacer()
                 if let scan = store.lastScan { Text("更新: \(scan.formatted(date: .omitted, time: .shortened))").foregroundStyle(.secondary) }
                 Button("再読み込み") { store.scan(force: true) }
-                Button("フォルダ選択") { store.chooseFolder() }
                 Button("元ファイルを開く") { openSource() }.disabled(selectedEntry == nil)
+                Button("設定…", action: openSettings)
             }
             .font(.caption)
             .padding(10)
@@ -428,7 +429,12 @@ private func statusBarIcon() -> NSImage? {
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.center()
-        panel.contentView = NSHostingView(rootView: SearchView(store: store, shortcuts: shortcuts, close: { [weak self] in self?.panel.orderOut(nil) }))
+        panel.contentView = NSHostingView(rootView: SearchView(
+            store: store,
+            shortcuts: shortcuts,
+            close: { [weak self] in self?.panel.orderOut(nil) },
+            openSettings: { [weak self] in self?.openSettings() }
+        ))
         self.panel = panel
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -447,7 +453,6 @@ private func statusBarIcon() -> NSImage? {
         searchMenuItem = searchItem
         menu.addItem(searchItem)
         menu.addItem(NSMenuItem(title: "設定…", action: #selector(openSettings), keyEquivalent: ","))
-        menu.addItem(NSMenuItem(title: "フォルダを選択", action: #selector(pickFolder), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "今すぐ再読み込み", action: #selector(refreshNow), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "終了", action: #selector(quit), keyEquivalent: "q"))
@@ -484,7 +489,6 @@ private func statusBarIcon() -> NSImage? {
         if (notification.object as? NSWindow) === settingsWindow { settingsEditor.reset(folder: store.folderURL) }
     }
 
-    @objc private func pickFolder() { store.chooseFolder() }
     @objc private func refreshNow() { store.scan(force: true) }
     @objc private func quit() { NSApp.terminate(nil) }
 

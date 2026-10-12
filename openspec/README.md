@@ -46,7 +46,7 @@
 - 検索は `.caseInsensitive` / `.diacriticInsensitive` / `.widthInsensitive` を指定したfoldingで正規化する。見出し側の空白区切り語はAND条件、ドットは最初の1つで分割する。
 - 空検索は既存エントリを列挙し、UIの候補は最大120件。パネル再表示時は検索語を空にし、先頭候補を選ぶ。
 - 手動更新は `scan(force: true)` で全対象ファイルを再解析する。差分キャッシュ再利用は通常の定期更新に適用される。
-- パネル下部にも再読み込み・フォルダ選択・元ファイルを開く操作と件数・最終更新時刻がある。
+- パネル下部には再読み込み・元ファイルを開く・設定の操作と件数・最終更新時刻がある。`simplify-settings-entry-points` でパネルとメニューの直接のフォルダ選択を削除し、通常のフォルダ変更は設定画面から行う。初回起動など未設定時のフォルダ選択は維持する。今回の検証結果は [検証記録](changes/archive/2026-10-12-simplify-settings-entry-points/verification.md) を参照する。
 - 選択フォルダのbookmarkをUserDefaultsへ保存する。現在はApp Sandboxを有効にしない個人用ビルドを想定する。
 
 ## 次の変更を始める
@@ -69,3 +69,7 @@ openspec validate --specs --strict --no-interactive
 既定キーをCmd+F1へ変更し、メニューの設定画面、項目単位の適用、キー記録、登録失敗の案内、`name.title` のプレースホルダーを追加した。キー登録の成功後に旧キーを解除し、フォルダは検証・bookmark生成後に切り替える。旧 `folderBookmark` と互換性を維持する。実装は `Application.swift`、`Settings.swift`、`FolderAccess.swift` に置く。
 
 差分仕様は基本仕様へ同期済み。元仕様との対応表のF1表記は移行時の記録であり、現在の呼び出し要件は設定済みショートカット（既定Cmd+F1）を使用する。現在のビルド・自動テスト、実機未確認の項目と残タスクは [検証記録](changes/archive/2026-10-12-add-search-settings/verification.md) と [tasks](changes/archive/2026-10-12-add-search-settings/tasks.md) を参照する。元仕様のEnter・⌘E・候補移動・検索順位・Markdown変換の差異は変更していない。
+
+## simplify-settings-entry-points の完了記録
+
+パネル右下とメニューの直接のフォルダ選択を削除し、右下に既存設定画面への入口を追加した。差分仕様3件は2026-10-12に基本仕様へ同期し、ユーザーによる実装確認とアーカイブ指示を受けてアーカイブした。ビルド・既存テスト7件・仕様検証は成功。詳細な実機検証4件は未確認として保持している。詳細は [検証記録](changes/archive/2026-10-12-simplify-settings-entry-points/verification.md) を参照する。
