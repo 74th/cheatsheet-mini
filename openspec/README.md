@@ -23,9 +23,9 @@
 
 ## 要件と現在の実装の差異
 
-`specs/` は元仕様の要件を基準とする。以下は移行時に `Sources/CheatSheetMini/main.swift` と
+`specs/` は元仕様の要件を基準とする。以下は移行時に `Sources/CheatSheetMini/Application.swift` と
 プロジェクトの `README.md` を読んで確認した実装・制約であり、要件適合の保証ではない。
-差異の修正は今回行っていない。今後、既存要件へ実装を合わせるか、仕様自体を変更するかを変更ごとに判断する。
+以下の表は移行時点の記録である。`add-search-settings` の設定・キー変更は下記の追加記録を参照する。今後、既存要件へ実装を合わせるか、仕様自体を変更するかを変更ごとに判断する。
 
 | 項目 | 基本仕様・元仕様 | 移行時の実装・未確認点 |
 | --- | --- | --- |
@@ -37,7 +37,7 @@
 | テーブル | Markdownテーブルを表示 | Down/CommonMarkを使用。READMEではGFM独自拡張の完全対応を保証しておらず、CSSのtable指定だけでは変換対応を証明できない |
 | 相対画像 | 元Markdownの位置基準で表示 | PNG/JPG/JPEG/GIF/WebP/SVGをdata URLに埋め込む。元Markdownのフォルダ配下で標準化後のパスを判定し、15,000,000バイト未満のみを埋め込む。親フォルダへの参照・絶対パス画像は埋め込まない |
 | 外部画像 | ローカル参照にネットワーク不要 | HTTP(S)画像は埋め込まずWebKitのロード処理に任せる。外部画像自体の表示は通信に依存する |
-| F1 / Space / 速度 | 即座に表示・入力し、全Space・フルスクリーンで利用 | Carbon F1登録とNSPanelのSpace設定がある。システムキー競合、実際のフォーカス・Space動作、50ms目標は未検証。代替キー設定UIはない |
+| F1 / Space / 速度 | 即座に表示・入力し、全Space・フルスクリーンで利用 | 移行時はCarbon F1登録とNSPanelのSpace設定があり、代替キー設定UIはなかった。現在の変更では既定Cmd+F1・設定UIを実装。実際のフォーカス・Space動作と50ms目標は実機未検証 |
 
 ソースから確認できる追加の挙動:
 
@@ -61,5 +61,11 @@ openspec list --specs
 openspec validate --specs --strict --no-interactive
 ```
 
-導入時点ではアクティブなchangeを作成していない。
+導入時点ではアクティブなchangeを作成していなかった。`add-search-settings` は2026-10-12に基本仕様へ同期し、実機未確認の記録を保持してアーカイブした。
 今回の検証対象は仕様の構造・記述であり、アプリのビルドやmacOS実機操作は実施していない。
+
+## add-search-settings の実装・検証記録
+
+既定キーをCmd+F1へ変更し、メニューの設定画面、項目単位の適用、キー記録、登録失敗の案内、`name.title` のプレースホルダーを追加した。キー登録の成功後に旧キーを解除し、フォルダは検証・bookmark生成後に切り替える。旧 `folderBookmark` と互換性を維持する。実装は `Application.swift`、`Settings.swift`、`FolderAccess.swift` に置く。
+
+差分仕様は基本仕様へ同期済み。元仕様との対応表のF1表記は移行時の記録であり、現在の呼び出し要件は設定済みショートカット（既定Cmd+F1）を使用する。現在のビルド・自動テスト、実機未確認の項目と残タスクは [検証記録](changes/archive/2026-10-12-add-search-settings/verification.md) と [tasks](changes/archive/2026-10-12-add-search-settings/tasks.md) を参照する。元仕様のEnter・⌘E・候補移動・検索順位・Markdown変換の差異は変更していない。

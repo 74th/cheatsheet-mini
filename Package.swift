@@ -13,6 +13,7 @@ let package = Package(
             name: "CheatSheetMini",
             dependencies: [.product(name: "Down", package: "Down")],
             resources: [.copy("Resources/StatusBarBirdBook.imageset")]
-        )
+        ),
+        .testTarget(name: "CheatSheetMiniTests", dependencies: ["CheatSheetMini"])
     ]
 )

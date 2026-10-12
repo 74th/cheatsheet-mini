@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Combine
 import WebKit
 import Carbon.HIToolbox
 import Down
@@ -140,39 +141,80 @@ func rank(_ query: String, entries: [Entry]) -> [Entry] {
     private var timer: Timer?
     private var accessActive = false
 
-    init() {
-        if let data = UserDefaults.standard.data(forKey: "folderBookmark") {
+    private let defaults: UserDefaults
+    private let folderAccess: FolderAccess
+
+    init(defaults: UserDefaults = .standard, folderAccess: FolderAccess = FolderAccess(), scheduleTimer: Bool = true) {
+        self.defaults = defaults
+        self.folderAccess = folderAccess
+        if let data = defaults.data(forKey: "folderBookmark") {
             var stale = false
-            if let url = try? URL(resolvingBookmarkData: data, options: [.withSecurityScope], relativeTo: nil, bookmarkDataIsStale: &stale) {
-                assignFolder(url, persist: stale)
-            }
+            do {
+                let url = try URL(resolvingBookmarkData: data, options: [.withSecurityScope], relativeTo: nil, bookmarkDataIsStale: &stale)
+                try applyFolder(url, persist: stale)
+            } catch { message = "保存したフォルダを復元できません: \(error.localizedDescription)" }
         }
-        scan(force: true)
-        // Repeating timer only. F1 never triggers scanning.
-        timer = Timer.scheduledTimer(withTimeInterval: 60 * 60, repeats: true) { [weak self] _ in
-            self?.scan()
+        // Repeating timer only. Panel calls and settings never trigger scanning.
+        if scheduleTimer {
+            timer = Timer.scheduledTimer(withTimeInterval: 60 * 60, repeats: true) { [weak self] _ in Task { @MainActor in self?.scan() } }
         }
     }
 
-    func chooseFolder() {
+    static func pickFolderURL() -> URL? {
         let picker = NSOpenPanel()
         picker.canChooseDirectories = true
         picker.canChooseFiles = false
         picker.allowsMultipleSelection = false
         picker.prompt = "チートシートフォルダを選択"
-        if picker.runModal() == .OK, let url = picker.url { assignFolder(url, persist: true); scan(force: true) }
+        return picker.runModal() == .OK ? picker.url : nil
     }
 
-    private func assignFolder(_ url: URL, persist: Bool) {
-        if accessActive { folderURL?.stopAccessingSecurityScopedResource() }
-        folderURL = url
-        accessActive = url.startAccessingSecurityScopedResource()
-        signatures.removeAll()
-        cached.removeAll()
-        entries = []
-        if persist, let bookmark = try? url.bookmarkData(options: [.withSecurityScope], includingResourceValuesForKeys: nil, relativeTo: nil) {
-            UserDefaults.standard.set(bookmark, forKey: "folderBookmark")
+    func chooseFolder() {
+        guard let url = Self.pickFolderURL() else { return }
+        do { try applyFolder(url) }
+        catch {
+            let alert = NSAlert()
+            alert.messageText = "フォルダを変更できません"
+            alert.informativeText = error.localizedDescription
+            alert.runModal()
         }
+    }
+
+    func applyFolder(path: String) throws {
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw SettingsFailure("フォルダのパスを入力してください。") }
+        let expanded = (trimmed as NSString).expandingTildeInPath
+        try applyFolder(URL(fileURLWithPath: expanded).standardizedFileURL)
+    }
+
+    func applyFolder(_ input: URL, persist: Bool = true) throws {
+        let url = URL(fileURLWithPath: input.standardizedFileURL.path, isDirectory: true)
+        // The same folder does not invalidate or scan the index.
+        guard url != folderURL else { return }
+        let started = folderAccess.start(url)
+        do {
+            try folderAccess.validate(url)
+            let bookmark = persist ? try folderAccess.bookmark(url) : nil
+            // All fallible preparation is complete before committing.
+            if let bookmark { defaults.set(bookmark, forKey: "folderBookmark") }
+            if accessActive, let old = folderURL { folderAccess.stop(old) }
+            folderURL = url
+            accessActive = started
+            signatures.removeAll()
+            cached.removeAll()
+            entries = []
+            scan(force: true)
+        } catch {
+            if started { folderAccess.stop(url) }
+            throw error
+        }
+    }
+
+    func shutdown() {
+        timer?.invalidate()
+        timer = nil
+        if accessActive, let folderURL { folderAccess.stop(folderURL) }
+        accessActive = false
     }
 
     func scan(force: Bool = false) {
@@ -214,7 +256,7 @@ func rank(_ query: String, entries: [Entry]) -> [Entry] {
 
 // Display relative images as embedded data. WKWebView's HTML string cannot
 // reliably load arbitrary file:// URLs, so image bytes are embedded instead.
-private func embedLocalImages(in html: String, relativeTo fileURL: URL) -> String {
+func embedLocalImages(in html: String, relativeTo fileURL: URL) -> String {
     guard let regex = try? NSRegularExpression(pattern: #"(<img\b[^>]*\bsrc=)(["'])([^"']+)\2"#, options: [.caseInsensitive]) else { return html }
     let ns = html as NSString
     var result = html
@@ -270,6 +312,7 @@ struct MarkdownPreview: NSViewRepresentable {
 
 struct SearchView: View {
     @ObservedObject var store: SheetStore
+    @ObservedObject var shortcuts: ShortcutSettings
     @State private var query = ""
     @State private var selection: String?
     @FocusState private var focused: Bool
@@ -282,12 +325,12 @@ struct SearchView: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("ファイル名.見出し 例: sbx.codex", text: $query)
+                TextField("name.title", text: $query)
                     .textFieldStyle(.plain)
                     .font(.system(size: 19))
                     .focused($focused)
                     .onSubmit { openSource() }
-                Text("F1 / esc").foregroundStyle(.tertiary).font(.caption)
+                Text("\(shortcuts.guide) / esc").foregroundStyle(.tertiary).font(.caption)
             }
             .padding(18)
             Divider()
@@ -339,9 +382,6 @@ extension Notification.Name {
     static let cheatSheetShow = Notification.Name("CheatSheetMini.Show")
 }
 
-private let hotkeySignature: OSType = 0x43534D49 // CSMI
-private var hotkeyHandler: EventHandlerRef?
-
 private func statusBarIcon() -> NSImage? {
     // SwiftPM's command-line build copies imagesets without compiling an asset
     // catalog. Load each resolution into one image at an 18-point logical size.
@@ -366,10 +406,15 @@ private func statusBarIcon() -> NSImage? {
     return image
 }
 
-@MainActor final class ApplicationController: NSObject, NSApplicationDelegate {
+@MainActor final class ApplicationController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var panel: NSPanel!
     private var statusItem: NSStatusItem!
-    private var hotkey: EventHotKeyRef?
+    private var hotkeyHandler: EventHandlerRef?
+    private var settingsWindow: NSWindow?
+    private let shortcuts = ShortcutSettings()
+    private lazy var settingsEditor = SettingsEditor(shortcuts: shortcuts)
+    private var menuObservation: AnyCancellable?
+    private var searchMenuItem: NSMenuItem?
     private let store = SheetStore()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -383,7 +428,7 @@ private func statusBarIcon() -> NSImage? {
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.center()
-        panel.contentView = NSHostingView(rootView: SearchView(store: store, close: { [weak self] in self?.panel.orderOut(nil) }))
+        panel.contentView = NSHostingView(rootView: SearchView(store: store, shortcuts: shortcuts, close: { [weak self] in self?.panel.orderOut(nil) }))
         self.panel = panel
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -398,7 +443,10 @@ private func statusBarIcon() -> NSImage? {
             button.setAccessibilityLabel("CheatSheet Mini")
         }
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "検索を開く (F1)", action: #selector(togglePanel), keyEquivalent: ""))
+        let searchItem = NSMenuItem(title: "検索を開く", action: #selector(togglePanel), keyEquivalent: "")
+        searchMenuItem = searchItem
+        menu.addItem(searchItem)
+        menu.addItem(NSMenuItem(title: "設定…", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "フォルダを選択", action: #selector(pickFolder), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "今すぐ再読み込み", action: #selector(refreshNow), keyEquivalent: ""))
         menu.addItem(.separator())
@@ -406,7 +454,34 @@ private func statusBarIcon() -> NSImage? {
         for item in menu.items { item.target = self }
         statusItem.menu = menu
         installHotkey()
+        menuObservation = shortcuts.objectWillChange.sink { [weak self] _ in
+            DispatchQueue.main.async { self?.updateKeyGuide() }
+        }
+        updateKeyGuide()
         if store.folderURL == nil { store.chooseFolder() }
+    }
+
+    private func updateKeyGuide() { searchMenuItem?.title = "検索を開く (\(shortcuts.guide))" }
+
+    @objc func openSettings() {
+        panel.orderOut(nil)
+        if settingsWindow == nil {
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 480),
+                                  styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+            window.title = "CheatSheet Mini — 設定"
+            window.isReleasedWhenClosed = false
+            window.delegate = self
+            window.contentView = NSHostingView(rootView: SettingsView(store: store, shortcuts: shortcuts, editor: settingsEditor))
+            window.center()
+            settingsWindow = window
+        }
+        if settingsWindow?.isVisible != true { settingsEditor.reset(folder: store.folderURL) }
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow?.makeKeyAndOrderFront(nil)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        if (notification.object as? NSWindow) === settingsWindow { settingsEditor.reset(folder: store.folderURL) }
     }
 
     @objc private func pickFolder() { store.chooseFolder() }
@@ -419,7 +494,7 @@ private func statusBarIcon() -> NSImage? {
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         NotificationCenter.default.post(name: .cheatSheetShow, object: nil)
-        // Intentionally no scan on F1.
+        // Intentionally no scan on panel calls.
     }
 
     private func installHotkey() {
@@ -431,17 +506,18 @@ private func statusBarIcon() -> NSImage? {
             let result = GetEventParameter(event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil, MemoryLayout<EventHotKeyID>.size, nil, &keyID)
             guard result == noErr, keyID.signature == hotkeySignature else { return OSStatus(eventNotHandledErr) }
             let controller = Unmanaged<ApplicationController>.fromOpaque(context).takeUnretainedValue()
-            DispatchQueue.main.async { controller.togglePanel() }
+            DispatchQueue.main.async {
+                if controller.shortcuts.activeID == keyID.id { controller.togglePanel() }
+            }
             return noErr
         }, 1, [spec], opaque, &hotkeyHandler)
-        guard status == noErr else { NSLog("Could not install F1 event handler: %d", status); return }
-        let keyID = EventHotKeyID(signature: hotkeySignature, id: 1)
-        let registerStatus = RegisterEventHotKey(UInt32(kVK_F1), 0, keyID, GetApplicationEventTarget(), 0, &hotkey)
-        if registerStatus != noErr { NSLog("F1 registration failed (%d). Check system shortcuts.", registerStatus) }
+        shortcuts.start(handlerError: status == noErr ? nil : "キーのイベント受付を開始できません (\(status))。メニューをご利用ください。")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        if let hotkey { UnregisterEventHotKey(hotkey) }
+        settingsEditor.stopRecording()
+        shortcuts.shutdown()
+        store.shutdown()
         if let hotkeyHandler { RemoveEventHandler(hotkeyHandler) }
     }
 }
