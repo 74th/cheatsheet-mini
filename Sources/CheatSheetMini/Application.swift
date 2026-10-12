@@ -312,9 +312,12 @@ struct MarkdownPreview: NSViewRepresentable {
 struct SearchView: View {
     @ObservedObject var store: SheetStore
     @ObservedObject var shortcuts: ShortcutSettings
+    @ObservedObject var sourceOpenSettings: SourceOpenSettings
     @State private var query = ""
     @State private var selection: String?
+    @State private var sourceOpenError: String?
     @FocusState private var focused: Bool
+    private let sourceOpener = SourceOpener()
     let close: () -> Void
     let openSettings: () -> Void
     var results: [Entry] { Array(rank(query, entries: store.entries).prefix(120)) }
@@ -370,11 +373,23 @@ struct SearchView: View {
             focused = true
         }
         .onExitCommand(perform: close)
+        .alert("元ファイルを開けません", isPresented: Binding(
+            get: { sourceOpenError != nil },
+            set: { if !$0 { sourceOpenError = nil } }
+        )) {
+            Button("OK", role: .cancel) { sourceOpenError = nil }
+        } message: {
+            Text(sourceOpenError ?? "")
+        }
     }
 
     private func openSource() {
         guard let entry = selectedEntry else { return }
-        NSWorkspace.shared.open(entry.fileURL)
+        do {
+            try sourceOpener.open(entry.fileURL, command: sourceOpenSettings.command)
+        } catch {
+            sourceOpenError = error.localizedDescription
+        }
     }
 }
 
@@ -412,7 +427,8 @@ private func statusBarIcon() -> NSImage? {
     private var hotkeyHandler: EventHandlerRef?
     private var settingsWindow: NSWindow?
     private let shortcuts = ShortcutSettings()
-    private lazy var settingsEditor = SettingsEditor(shortcuts: shortcuts)
+    private let sourceOpenSettings = SourceOpenSettings()
+    private lazy var settingsEditor = SettingsEditor(shortcuts: shortcuts, sourceOpenSettings: sourceOpenSettings)
     private var menuObservation: AnyCancellable?
     private var searchMenuItem: NSMenuItem?
     private let store = SheetStore()
@@ -431,6 +447,7 @@ private func statusBarIcon() -> NSImage? {
         panel.contentView = NSHostingView(rootView: SearchView(
             store: store,
             shortcuts: shortcuts,
+            sourceOpenSettings: sourceOpenSettings,
             close: { [weak self] in self?.panel.orderOut(nil) },
             openSettings: { [weak self] in self?.openSettings() }
         ))
@@ -470,12 +487,14 @@ private func statusBarIcon() -> NSImage? {
     @objc func openSettings() {
         panel.orderOut(nil)
         if settingsWindow == nil {
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 480),
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 570),
                                   styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
             window.title = "CheatSheet Mini — 設定"
             window.isReleasedWhenClosed = false
             window.delegate = self
-            window.contentView = NSHostingView(rootView: SettingsView(store: store, shortcuts: shortcuts, editor: settingsEditor))
+            window.contentView = NSHostingView(rootView: SettingsView(
+                store: store, shortcuts: shortcuts, editor: settingsEditor, sourceOpenSettings: sourceOpenSettings
+            ))
             window.center()
             settingsWindow = window
         }

@@ -31,7 +31,7 @@
 | --- | --- | --- |
 | 検索対象 | 原則ファイル名と `##` 見出し | `rank` は文書タイトルも半分のスコアで検索する。本文は検索しない |
 | ファイル名指定と順位 | ファイル名一致を優先し、適切な一致がなければ全見出しへ検索 | ドットなしではファイル名・見出し・文書タイトルを同時に採点する。見出し完全一致120点、ファイル名完全一致60点なので元仕様の順序と異なる。ドットありのファイル名は曖昧一致も許す |
-| Enter | 選択項目を決定。決定後の詳細は未定義 | 検索欄の `.onSubmit` は元Markdownを既定アプリで開く |
+| Enter | 選択項目を決定。決定後の詳細は未定義 | 検索欄の `.onSubmit` は「元ファイルを開く」ボタンと同じ処理で元Markdownを開く。画面でコマンドを設定していなければ既定アプリを使う |
 | ⌘E | 元Markdownを開く | 専用のキー割り当てはない。「元ファイルを開く」ボタンがある |
 | ↑↓ | 検索入力後もマウスなしで候補を移動 | 専用キー処理はなくSwiftUI Listに依存。検索欄フォーカス中の操作は実機未確認 |
 | テーブル | Markdownテーブルを表示 | Down/CommonMarkを使用。READMEではGFM独自拡張の完全対応を保証しておらず、CSSのtable指定だけでは変換対応を証明できない |
@@ -49,6 +49,7 @@
 - パネル下部には再読み込み・元ファイルを開く・設定の操作と件数・最終更新時刻がある。`simplify-settings-entry-points` でパネルとメニューの直接のフォルダ選択を削除し、通常のフォルダ変更は設定画面から行う。初回起動など未設定時のフォルダ選択は維持する。今回の検証結果は [検証記録](changes/archive/2026-10-12-simplify-settings-entry-points/verification.md) を参照する。
 - 選択フォルダのbookmarkをUserDefaultsへ保存する。現在はApp Sandboxを有効にしない個人用ビルドを想定する。
 - `support-html-local-images` で本文のHTML画像タグを構文木から抽出し、ローカル相対画像と幅指定を表示する経路を追加した。既定の生HTML除去は維持し、コード中のタグは画像化しない。引用符付きのsrc・alt・title・widthのみを利用し、既存の画像形式・15,000,000バイト未満・元Markdownフォルダ配下の制約を維持する。詳細は [計画](changes/archive/2026-10-12-support-html-local-images/design.md) と [検証記録](changes/archive/2026-10-12-support-html-local-images/verification.md) を参照する。
+- `configure-source-open-command` で元Markdownの起動コマンドを設定画面から変更できるようにした。検索欄Enterとボタンで共有し、未設定時は既定アプリを使う。⌘Eの専用キー割り当ては引き続き未実装。差分仕様は基本仕様へ同期し、ユーザーの実装確認後にアーカイブした。実機詳細検証は [検証記録](changes/archive/2026-10-12-configure-source-open-command/verification.md) を参照する。設定方法は [README](../README.md#元ファイルを開くコマンド) に記す。
 
 ## 次の変更を始める
 

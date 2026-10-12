@@ -62,6 +62,24 @@ struct SettingsFailure: LocalizedError {
     init(_ message: String) { errorDescription = message }
 }
 
+@MainActor final class SourceOpenSettings: ObservableObject {
+    static let storageKey = "sourceOpenCommand"
+    @Published private(set) var command: String
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        command = defaults.string(forKey: Self.storageKey) ?? ""
+    }
+
+    func apply(_ draft: String) throws {
+        let value = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !value.isEmpty { _ = try SourceOpener.parse(value) }
+        defaults.set(value, forKey: Self.storageKey)
+        command = value
+    }
+}
+
 @MainActor final class CarbonHotkeyRegistrar: HotkeyRegistering {
     func register(_ shortcut: Shortcut, id: UInt32) throws -> EventHotKeyRef {
         var reference: EventHotKeyRef?
@@ -160,17 +178,25 @@ struct SettingsFailure: LocalizedError {
 @MainActor final class SettingsEditor: ObservableObject {
     @Published var folderPath = ""
     @Published var draftShortcut = Shortcut.defaultValue
+    @Published var draftSourceOpenCommand = ""
     @Published var folderError: String?
     @Published var inputError: String?
+    @Published var sourceOpenError: String?
     private var eventMonitor: Any?
     let shortcuts: ShortcutSettings
-    init(shortcuts: ShortcutSettings) { self.shortcuts = shortcuts }
+    let sourceOpenSettings: SourceOpenSettings
+    init(shortcuts: ShortcutSettings, sourceOpenSettings: SourceOpenSettings) {
+        self.shortcuts = shortcuts
+        self.sourceOpenSettings = sourceOpenSettings
+    }
     func reset(folder: URL?) {
         stopRecording()
         folderPath = folder?.path ?? ""
         draftShortcut = shortcuts.shortcut
+        draftSourceOpenCommand = sourceOpenSettings.command
         folderError = nil
         inputError = nil
+        sourceOpenError = nil
     }
     func record() {
         shortcuts.beginRecording()
@@ -203,6 +229,7 @@ struct SettingsView: View {
     @ObservedObject var store: SheetStore
     @ObservedObject var shortcuts: ShortcutSettings
     @ObservedObject var editor: SettingsEditor
+    @ObservedObject var sourceOpenSettings: SourceOpenSettings
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("設定").font(.title2)
@@ -232,6 +259,23 @@ struct SettingsView: View {
             if let error = shortcuts.error { Text(error).foregroundStyle(.red) }
             if let warning = shortcuts.loadWarning { Text(warning).foregroundStyle(.orange) }
             Text("修飾なしはF1〜F20。Escで記録をキャンセルします。機種やシステム設定によりFnも必要です。")
+                .font(.caption).foregroundStyle(.secondary)
+            Divider()
+            Text("元ファイルを開くコマンド").font(.headline)
+            Text("現在: \(sourceOpenSettings.command.isEmpty ? "macOSの既定アプリ" : sourceOpenSettings.command)")
+                .font(.caption).textSelection(.enabled)
+            HStack {
+                TextField("例: code $file（空欄で既定アプリ）", text: $editor.draftSourceOpenCommand)
+                Button("コマンドを適用") {
+                    do {
+                        try sourceOpenSettings.apply(editor.draftSourceOpenCommand)
+                        editor.draftSourceOpenCommand = sourceOpenSettings.command
+                        editor.sourceOpenError = nil
+                    } catch { editor.sourceOpenError = error.localizedDescription }
+                }
+            }
+            if let error = editor.sourceOpenError { Text(error).foregroundStyle(.red) }
+            Text("$file は元Markdownの絶対パスです。空欄を適用すると既定アプリに戻ります。")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .textFieldStyle(.roundedBorder)

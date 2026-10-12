@@ -104,7 +104,7 @@ final class SettingsTests: XCTestCase {
     @MainActor func testEditorDiscardsDraftAndRestoresRecording() {
         let settings = ShortcutSettings(defaults: isolatedDefaults(), registrar: FakeRegistrar())
         settings.start()
-        let editor = SettingsEditor(shortcuts: settings)
+        let editor = SettingsEditor(shortcuts: settings, sourceOpenSettings: SourceOpenSettings(defaults: isolatedDefaults()))
         editor.folderPath = "/unapplied"
         editor.draftShortcut = Shortcut(keyCode: UInt32(kVK_F2), modifiers: 0)
         settings.beginRecording()
@@ -119,7 +119,7 @@ final class SettingsTests: XCTestCase {
         let defaults = isolatedDefaults()
         let settings = ShortcutSettings(defaults: defaults, registrar: FakeRegistrar())
         settings.start()
-        let editor = SettingsEditor(shortcuts: settings)
+        let editor = SettingsEditor(shortcuts: settings, sourceOpenSettings: SourceOpenSettings(defaults: isolatedDefaults()))
         func key(_ code: Int, flags: NSEvent.ModifierFlags = []) -> NSEvent {
             NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0,
                              windowNumber: 0, context: nil, characters: "", charactersIgnoringModifiers: "",
