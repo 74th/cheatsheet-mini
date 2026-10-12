@@ -76,3 +76,9 @@ openspec validate --specs --strict --no-interactive
 ## support-html-local-images の完了記録
 
 本文中のHTML画像タグによる相対画像と幅指定を実装した。差分仕様は2026-10-12に基本仕様へ同期し、ユーザーから画像表示の確認とアーカイブ指示を受けてアーカイブした。テスト13件・releaseビルド・仕様検証は成功。幅変更等の詳細な実機確認は未確認として保持する。詳細は [検証記録](changes/archive/2026-10-12-support-html-local-images/verification.md) を参照する。
+
+## enable-edit-shortcuts-and-clear-search の完了記録
+
+編集メニューに⌘X／⌘C／⌘V／⌘Aを追加し、検索欄・設定入力欄とドキュメントのマウス選択からのコピーに対応した。⌘Wによる検索語クリア、検索欄の↓による候補リストへのフォーカス移動、検索変更時の先頭選択とスクロールリセット、候補リスト:本文の約3:7の幅比率を実装した。差分仕様2件は2026-10-12に基本仕様へ同期し、ユーザーの動作確認と明示的なアーカイブ指示を受けてアーカイブした。
+
+自動テスト18件・releaseビルド・厳密な仕様検証は成功。ユーザーから初回キー対応、スクロール修正、幅比率の表示確認あり。詳細な実機検証9タスクは未チェックで保持し、全シナリオの検証済みとは扱わない。上記の移行時の↑↓操作に関する記録に対し、現在は検索欄の↓でリストへ移り、リスト上の↑↓で候補を操作する。⌘Eは引き続き専用キー未実装。詳細は [検証記録](changes/archive/2026-10-12-enable-edit-shortcuts-and-clear-search/verification.md) と [タスク](changes/archive/2026-10-12-enable-edit-shortcuts-and-clear-search/tasks.md) を参照する。

@@ -316,8 +316,10 @@ struct SearchView: View {
     @State private var query = ""
     @State private var selection: String?
     @State private var sourceOpenError: String?
-    @FocusState private var focused: Bool
+    @State private var focused = false
+    @FocusState private var resultsFocused: Bool
     private let sourceOpener = SourceOpener()
+    let commandTarget: UUID
     let close: () -> Void
     let openSettings: () -> Void
     var results: [Entry] { Array(rank(query, entries: store.entries).prefix(120)) }
@@ -328,28 +330,41 @@ struct SearchView: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("name.title", text: $query)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 19))
-                    .focused($focused)
-                    .onSubmit { openSource() }
+                SearchTextField(text: $query, focused: $focused,
+                                moveToResults: focusResults, submit: openSource, close: close)
                 Text("\(shortcuts.guide) / esc").foregroundStyle(.tertiary).font(.caption)
             }
             .padding(18)
             Divider()
-            HSplitView {
-                List(results, selection: $selection) { entry in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(entry.heading).lineLimit(2)
-                        Text(entry.fileName + ".md").font(.caption).foregroundStyle(.secondary)
+            GeometryReader { geometry in
+                HStack(spacing: 0) {
+                    ScrollViewReader { scrollProxy in
+                        List(results, selection: $selection) { entry in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(entry.heading).lineLimit(2)
+                                Text(entry.fileName + ".md").font(.caption).foregroundStyle(.secondary)
+                            }
+                            .padding(.vertical, 5)
+                            .tag(entry.id)
+                            .id(entry.id)
+                        }
+                        .listStyle(.sidebar)
+                        .focused($resultsFocused)
+                        .onChange(of: query) { value in
+                            selection = results.first?.id
+                            // Wait for the filtered rows to be installed before
+                            // scrolling, including when the first result is unchanged.
+                            DispatchQueue.main.async {
+                                guard query == value, let firstID = results.first?.id else { return }
+                                scrollProxy.scrollTo(firstID, anchor: .top)
+                            }
+                        }
                     }
-                    .padding(.vertical, 5)
-                    .tag(entry.id)
+                    .frame(width: max(0, geometry.size.width - 1) * 0.3)
+                    Divider()
+                    MarkdownPreview(entry: selectedEntry)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .listStyle(.sidebar)
-                .frame(minWidth: 230, idealWidth: 300)
-                MarkdownPreview(entry: selectedEntry)
-                    .frame(minWidth: 400)
             }
             Divider()
             HStack(spacing: 12) {
@@ -365,12 +380,13 @@ struct SearchView: View {
         }
         .frame(minWidth: 780, minHeight: 480)
         .onAppear { focused = true }
-        .onChange(of: query) { _ in selection = results.first?.id }
         .onChange(of: store.entries) { _ in selection = results.first?.id }
         .onReceive(NotificationCenter.default.publisher(for: .cheatSheetShow)) { _ in
-            query = ""
-            selection = results.first?.id
-            focused = true
+            resetSearch()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .cheatSheetClearSearch)) { notification in
+            guard notification.object as? UUID == commandTarget else { return }
+            resetSearch()
         }
         .onExitCommand(perform: close)
         .alert("元ファイルを開けません", isPresented: Binding(
@@ -381,6 +397,23 @@ struct SearchView: View {
         } message: {
             Text(sourceOpenError ?? "")
         }
+    }
+
+    private func resetSearch() {
+        query = ""
+        selection = results.first?.id
+        resultsFocused = false
+        // Clear the results focus before returning to the native field editor.
+        // This also works when the query was already empty.
+        focused = false
+        DispatchQueue.main.async { focused = true }
+    }
+
+    private func focusResults() {
+        guard !results.isEmpty else { return }
+        if !results.contains(where: { $0.id == selection }) { selection = results.first?.id }
+        focused = false
+        resultsFocused = true
     }
 
     private func openSource() {
@@ -395,6 +428,7 @@ struct SearchView: View {
 
 extension Notification.Name {
     static let cheatSheetShow = Notification.Name("CheatSheetMini.Show")
+    static let cheatSheetClearSearch = Notification.Name("CheatSheetMini.ClearSearch")
 }
 
 private func statusBarIcon() -> NSImage? {
@@ -421,7 +455,7 @@ private func statusBarIcon() -> NSImage? {
     return image
 }
 
-@MainActor final class ApplicationController: NSObject, NSApplicationDelegate, NSWindowDelegate {
+@MainActor final class ApplicationController: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuItemValidation {
     private var panel: NSPanel!
     private var statusItem: NSStatusItem!
     private var hotkeyHandler: EventHandlerRef?
@@ -432,9 +466,11 @@ private func statusBarIcon() -> NSImage? {
     private var menuObservation: AnyCancellable?
     private var searchMenuItem: NSMenuItem?
     private let store = SheetStore()
+    private let searchCommandTarget = UUID()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        installMainMenu()
         let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 960, height: 620),
                             styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
                             backing: .buffered, defer: false)
@@ -448,6 +484,7 @@ private func statusBarIcon() -> NSImage? {
             store: store,
             shortcuts: shortcuts,
             sourceOpenSettings: sourceOpenSettings,
+            commandTarget: searchCommandTarget,
             close: { [weak self] in self?.panel.orderOut(nil) },
             openSettings: { [weak self] in self?.openSettings() }
         ))
@@ -483,6 +520,59 @@ private func statusBarIcon() -> NSImage? {
     }
 
     private func updateKeyGuide() { searchMenuItem?.title = "検索を開く (\(shortcuts.guide))" }
+
+    private func installMainMenu() {
+        let mainMenu = NSMenu()
+        let appItem = NSMenuItem()
+        let appMenu = NSMenu(title: "CheatSheet Mini")
+        let settingsItem = NSMenuItem(title: "設定…", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        appMenu.addItem(settingsItem)
+        appMenu.addItem(.separator())
+        let quitItem = NSMenuItem(title: "CheatSheet Miniを終了", action: #selector(quit), keyEquivalent: "q")
+        quitItem.target = self
+        appMenu.addItem(quitItem)
+        appItem.submenu = appMenu
+        mainMenu.addItem(appItem)
+
+        let editItem = NSMenuItem()
+        let editMenu = NSMenu(title: "編集")
+        for (title, action, key) in [("切り取り", "cut:", "x"), ("コピー", "copy:", "c"), ("ペースト", "paste:", "v"), ("すべて選択", "selectAll:", "a")] {
+            let item = NSMenuItem(title: title, action: NSSelectorFromString(action), keyEquivalent: key)
+            item.keyEquivalentModifierMask = [.command]
+            // nil target routes to the focused field editor or WebKit view.
+            item.target = nil
+            editMenu.addItem(item)
+        }
+        editItem.submenu = editMenu
+        mainMenu.addItem(editItem)
+
+        let windowItem = NSMenuItem()
+        let windowMenu = NSMenu(title: "ウィンドウ")
+        let closeItem = NSMenuItem(title: "検索をクリア／ウィンドウを閉じる", action: #selector(clearSearchOrCloseWindow), keyEquivalent: "w")
+        closeItem.keyEquivalentModifierMask = [.command]
+        closeItem.target = self
+        windowMenu.addItem(closeItem)
+        windowItem.submenu = windowMenu
+        mainMenu.addItem(windowItem)
+        NSApp.mainMenu = mainMenu
+    }
+
+    @objc func clearSearchOrCloseWindow(_ sender: Any?) {
+        guard let window = NSApp.keyWindow else { return }
+        if window === panel {
+            NotificationCenter.default.post(name: .cheatSheetClearSearch, object: searchCommandTarget)
+        } else if window === settingsWindow {
+            window.performClose(sender)
+        }
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        guard menuItem.action == #selector(clearSearchOrCloseWindow) else { return true }
+        guard let window = NSApp.keyWindow else { return false }
+        menuItem.title = window === panel ? "検索をクリア" : "ウィンドウを閉じる"
+        return window === panel || window === settingsWindow
+    }
 
     @objc func openSettings() {
         panel.orderOut(nil)
