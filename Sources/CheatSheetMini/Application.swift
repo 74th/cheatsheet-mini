@@ -262,7 +262,7 @@ func embedLocalImages(in html: String, relativeTo fileURL: URL) -> String {
     var result = html
     for match in regex.matches(in: html, range: NSRange(location: 0, length: ns.length)).reversed() {
         let original = ns.substring(with: match.range(at: 3))
-        guard let decoded = original.removingPercentEncoding, !decoded.hasPrefix("/") && !decoded.contains("://") && !decoded.hasPrefix("data:") else { continue }
+        guard let decoded = decodeHTMLEntities(original).removingPercentEncoding, !decoded.hasPrefix("/") && !decoded.contains("://") && !decoded.hasPrefix("data:") else { continue }
         let base = fileURL.deletingLastPathComponent().standardizedFileURL
         let imageURL = base.appendingPathComponent(decoded).standardizedFileURL
         guard imageURL.path.hasPrefix(base.path + "/"),
@@ -294,8 +294,7 @@ struct MarkdownPreview: NSViewRepresentable {
             view.loadHTMLString("<html><body style='font:14px -apple-system;color:#888;padding:20px'>見出しを選択してください</body></html>", baseURL: nil)
             return
         }
-        let markdownHTML = (try? Down(markdownString: entry.markdown).toHTML()) ?? "<pre>表示できませんでした</pre>"
-        let content = embedLocalImages(in: markdownHTML, relativeTo: entry.fileURL)
+        let content = (try? markdownPreviewHTML(entry.markdown, relativeTo: entry.fileURL)) ?? "<pre>表示できませんでした</pre>"
         let html = """
         <!doctype html><html><head><meta charset="utf-8"><style>
         :root { color-scheme: light dark; }

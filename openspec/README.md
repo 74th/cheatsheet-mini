@@ -48,6 +48,7 @@
 - 手動更新は `scan(force: true)` で全対象ファイルを再解析する。差分キャッシュ再利用は通常の定期更新に適用される。
 - パネル下部には再読み込み・元ファイルを開く・設定の操作と件数・最終更新時刻がある。`simplify-settings-entry-points` でパネルとメニューの直接のフォルダ選択を削除し、通常のフォルダ変更は設定画面から行う。初回起動など未設定時のフォルダ選択は維持する。今回の検証結果は [検証記録](changes/archive/2026-10-12-simplify-settings-entry-points/verification.md) を参照する。
 - 選択フォルダのbookmarkをUserDefaultsへ保存する。現在はApp Sandboxを有効にしない個人用ビルドを想定する。
+- `support-html-local-images` で本文のHTML画像タグを構文木から抽出し、ローカル相対画像と幅指定を表示する経路を追加した。既定の生HTML除去は維持し、コード中のタグは画像化しない。引用符付きのsrc・alt・title・widthのみを利用し、既存の画像形式・15,000,000バイト未満・元Markdownフォルダ配下の制約を維持する。詳細は [計画](changes/archive/2026-10-12-support-html-local-images/design.md) と [検証記録](changes/archive/2026-10-12-support-html-local-images/verification.md) を参照する。
 
 ## 次の変更を始める
 
@@ -73,3 +74,7 @@ openspec validate --specs --strict --no-interactive
 ## simplify-settings-entry-points の完了記録
 
 パネル右下とメニューの直接のフォルダ選択を削除し、右下に既存設定画面への入口を追加した。差分仕様3件は2026-10-12に基本仕様へ同期し、ユーザーによる実装確認とアーカイブ指示を受けてアーカイブした。ビルド・既存テスト7件・仕様検証は成功。詳細な実機検証4件は未確認として保持している。詳細は [検証記録](changes/archive/2026-10-12-simplify-settings-entry-points/verification.md) を参照する。
+
+## support-html-local-images の完了記録
+
+本文中のHTML画像タグによる相対画像と幅指定を実装した。差分仕様は2026-10-12に基本仕様へ同期し、ユーザーから画像表示の確認とアーカイブ指示を受けてアーカイブした。テスト13件・releaseビルド・仕様検証は成功。幅変更等の詳細な実機確認は未確認として保持する。詳細は [検証記録](changes/archive/2026-10-12-support-html-local-images/verification.md) を参照する。
