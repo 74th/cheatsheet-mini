@@ -6,9 +6,8 @@ context: |
   Swift 5.9 / SwiftUI / AppKit / Carbon / WKWebViewを使用し、
   MarkdownのHTML変換にはSwiftPM依存のDownを使用する。
   現在の実装はSources/CheatSheetMini/Application.swiftが中心で、設定はSettings.swiftとFolderAccess.swiftに置く。
-  基本仕様はopenspec/specs/、元仕様との対応・実装差異はopenspec/README.md。
-  基本仕様はxprivate/spec.mdの要件を移行したものであり、
-  全要件の実装・実機検証済みを意味しない。
+  基本仕様はopenspec/specs/、実装との差異はopenspec/README.md。
+  基本仕様の全要件が実装・実機検証済みとは限らない。
   指定フォルダ直下の.mdファイル約200個を想定する。インデックスはメモリ内に
   保持し、起動時・60分ごと・手動で更新する。設定済みショートカットやメニュー呼び出しでは更新チェックを行わない。
   本文全文検索、再帰探索、Markdown編集、DB、クラウド同期は対象外。

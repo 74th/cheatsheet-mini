@@ -1,36 +1,33 @@
 # OpenSpecでの仕様管理
 
-2026-10-12に `xprivate/spec.md` の既存要件を `specs/` に移行した。
-これは次の変更の比較元となる基本仕様であり、新機能の提案や未実装機能の実装ではない。
+基本仕様は `specs/` に置き、次の変更の比較元とする。
 基本仕様は `## Purpose` と `## Requirements` を持ち、各要件をSHALLとWHEN/THENシナリオで記述する。
 変更用の `ADDED / MODIFIED / REMOVED / RENAMED Requirements` は基本仕様には置かない。
 
-## 仕様の配置と元仕様との対応
+## 仕様の配置
 
-| Capability | 対象 | `xprivate/spec.md` の節 |
-| --- | --- | --- |
-| [application-runtime](specs/application-runtime/spec.md) | 対象環境、常駐、メニュー、ローカル動作、非目標、性能・UX優先順位 | 1–2、17、19–25、27 |
-| [directory-settings](specs/directory-settings/spec.md) | フォルダ選択、復元、非再帰のファイル対象 | 3、14、20 |
-| [markdown-index](specs/markdown-index/spec.md) | エントリ構造、分割、フェンス、起動時・60分・差分・手動更新、F1で更新しない | 4–6、15–18、20 |
-| [entry-search](specs/entry-search/spec.md) | ファイル名、ドット構文、見出し、日本語・曖昧検索、優先順位、逐次検索 | 7–9 |
-| [search-panel](specs/search-panel/spec.md) | F1、フォーカス、Space、左右表示、キーボード、元ファイル | 7、10–11、19、27 |
-| [markdown-preview](specs/markdown-preview/spec.md) | Markdown、コード、テーブル、相対画像 | 12–13 |
+| Capability | 対象 |
+| --- | --- |
+| [application-runtime](specs/application-runtime/spec.md) | 対象環境、常駐、メニュー、ローカル動作、非目標、性能・UX優先順位 |
+| [directory-settings](specs/directory-settings/spec.md) | フォルダ選択、復元、非再帰のファイル対象 |
+| [markdown-index](specs/markdown-index/spec.md) | エントリ構造、分割、フェンス、起動時・60分・差分・手動更新 |
+| [entry-search](specs/entry-search/spec.md) | ファイル名、ドット構文、見出し、日本語・曖昧検索、優先順位、逐次検索 |
+| [search-panel](specs/search-panel/spec.md) | ショートカット、フォーカス、Space、左右表示、キーボード、元ファイル |
+| [markdown-preview](specs/markdown-preview/spec.md) | Markdown、コード、テーブル、相対画像 |
 
-元仕様26節の受け入れテスト7件は、上記の検索・分割・画像・更新・非再帰のシナリオに移行した。
-22節のソース構成は推奨例であり、ディレクトリ構造を必須要件にはしない。
-23節の推奨技術のうち現実の採用技術は `config.yaml` のcontextに記録した。
+採用技術は `config.yaml` のcontextに記録した。
 50ms未満は目標値として扱い、測定済みや厳密な保証とはしない。
 
 ## 要件と現在の実装の差異
 
-`specs/` は元仕様の要件を基準とする。以下は移行時に `Sources/CheatSheetMini/Application.swift` と
+`specs/` を基本仕様とする。以下は仕様を整備した時点で `Sources/CheatSheetMini/Application.swift` と
 プロジェクトの `README.md` を読んで確認した実装・制約であり、要件適合の保証ではない。
 以下の表は移行時点の記録である。`add-search-settings` の設定・キー変更は下記の追加記録を参照する。今後、既存要件へ実装を合わせるか、仕様自体を変更するかを変更ごとに判断する。
 
-| 項目 | 基本仕様・元仕様 | 移行時の実装・未確認点 |
+| 項目 | 基本仕様 | 移行時の実装・未確認点 |
 | --- | --- | --- |
 | 検索対象 | 原則ファイル名と `##` 見出し | `rank` は文書タイトルも半分のスコアで検索する。本文は検索しない |
-| ファイル名指定と順位 | ファイル名一致を優先し、適切な一致がなければ全見出しへ検索 | ドットなしではファイル名・見出し・文書タイトルを同時に採点する。見出し完全一致120点、ファイル名完全一致60点なので元仕様の順序と異なる。ドットありのファイル名は曖昧一致も許す |
+| ファイル名指定と順位 | ファイル名一致を優先し、適切な一致がなければ全見出しへ検索 | ドットなしではファイル名・見出し・文書タイトルを同時に採点する。見出し完全一致120点、ファイル名完全一致60点なので基本仕様の順序と異なる。ドットありのファイル名は曖昧一致も許す |
 | Enter | 選択項目を決定。決定後の詳細は未定義 | 検索欄の `.onSubmit` は「元ファイルを開く」ボタンと同じ処理で元Markdownを開く。画面でコマンドを設定していなければ既定アプリを使う |
 | ⌘E | 元Markdownを開く | 専用のキー割り当てはない。「元ファイルを開く」ボタンがある |
 | ↑↓ | 検索入力後もマウスなしで候補を移動 | 専用キー処理はなくSwiftUI Listに依存。検索欄フォーカス中の操作は実機未確認 |
@@ -70,7 +67,7 @@ openspec validate --specs --strict --no-interactive
 
 既定キーをCmd+F1へ変更し、メニューの設定画面、項目単位の適用、キー記録、登録失敗の案内、`name.title` のプレースホルダーを追加した。キー登録の成功後に旧キーを解除し、フォルダは検証・bookmark生成後に切り替える。旧 `folderBookmark` と互換性を維持する。実装は `Application.swift`、`Settings.swift`、`FolderAccess.swift` に置く。
 
-差分仕様は基本仕様へ同期済み。元仕様との対応表のF1表記は移行時の記録であり、現在の呼び出し要件は設定済みショートカット（既定Cmd+F1）を使用する。現在のビルド・自動テスト、実機未確認の項目と残タスクは [検証記録](changes/archive/2026-10-12-add-search-settings/verification.md) と [tasks](changes/archive/2026-10-12-add-search-settings/tasks.md) を参照する。元仕様のEnter・⌘E・候補移動・検索順位・Markdown変換の差異は変更していない。
+差分仕様は基本仕様へ同期済み。上記の差異表のF1表記は移行時の記録であり、現在の呼び出し要件は設定済みショートカット（既定Cmd+F1）を使用する。現在のビルド・自動テスト、実機未確認の項目と残タスクは [検証記録](changes/archive/2026-10-12-add-search-settings/verification.md) と [tasks](changes/archive/2026-10-12-add-search-settings/tasks.md) を参照する。Enter・⌘E・候補移動・検索順位・Markdown変換に関する差異は変更していない。
 
 ## simplify-settings-entry-points の完了記録
 
