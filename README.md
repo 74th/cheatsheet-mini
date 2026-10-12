@@ -18,13 +18,6 @@ cd CheatSheetMini
 SwiftPMがDownの依存関係を取得し、`dist/CheatSheet Mini.app` を作成して起動します。
 Xcodeでは `Package.swift` を開き、ソースを閲覧・編集できます。
 起動せずビルドだけ行う場合は `./build-app.sh --no-open` を使用します。
-この配布物は個人利用向けのソースコード試作版です。macOS実機でのビルド・動作検証は未実施です。
-
-## アイコン
-
-アプリアイコンは `Resources/AppIcon.iconset` からビルド時に `.icns` を生成します。
-メニューバーの画像は `Sources/CheatSheetMini/Resources/StatusBarBirdBook.imageset` に同梱しています。
-SwiftPMのコマンドラインビルドではimagesetを直接読み込み、18ポイントのテンプレート画像として表示します。ライト・ダークモードの着色はmacOSに任せます。
 
 ## 操作
 
