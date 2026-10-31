@@ -32,7 +32,7 @@ VERSION=0.2.0
 git tag -a "$VERSION" -m "$VERSION"
 ```
 
-- タグを付けたコミットでビルドすると、バージョンがタグそのものになる。手順4の確認で問題があれば `git tag -d "$VERSION"` で消してやり直す。
+- タグを付けたコミットでビルドすると、バージョンがタグそのものになる。手順3のバージョン確認で問題があれば `git tag -d "$VERSION"` で消してやり直す。
 
 ## 3. ビルドしてzipを作る
 
@@ -45,24 +45,15 @@ ditto -c -k --sequesterRsrc --keepParent "dist/CheatSheet Mini.app" "dist/CheatS
 
 - zipは `ditto` で作る。`zip` コマンドではアプリの署名や属性が壊れることがある。
 - `dist/` は `.gitignore` 対象なのでzipはコミットされない。
+- バージョンの確認は `plutil` の結果で行い、ユーザーにメニューの表示を確認してもらう必要はない（ユーザーの判断）。そのままタグのpushに進む。
 
-## 4. ビルドしたアプリを確認する
-
-```bash
-pkill -x CheatSheetMini; while pgrep -x CheatSheetMini >/dev/null; do sleep 0.2; done
-open "dist/CheatSheet Mini.app"
-```
-
-- ユーザーにメニューバーのアイコンをクリックして、メニューに `バージョン $VERSION` が表示されることを確認してもらう。
-- **確認が取れるまでタグのpushとリリース作成をしない。**
-
-## 5. タグをpushする
+## 4. タグをpushする
 
 ```bash
 git push origin "$VERSION"
 ```
 
-## 6. GitHub Releaseを作る
+## 5. GitHub Releaseを作る
 
 前回のタグからの変更を `git log --oneline <前回のタグ>..$VERSION` で確認し、日本語のリリースノートを書く。
 
@@ -81,7 +72,7 @@ gh release create "$VERSION" "dist/CheatSheet-Mini-$VERSION.zip" \
 `CheatSheet-Mini-<バージョン>.zip` をダウンロードして展開し、`CheatSheet Mini.app` を「アプリケーション」フォルダへ移動してください。Appleの公証を受けていないため、初回起動時の許可が必要です。手順は [README](https://github.com/74th/cheatsheet-mini#ダウンロードして使う) を参照してください。Apple Silicon（arm64）用です。
 ```
 
-## 7. 報告する
+## 6. 報告する
 
 ```bash
 gh release view "$VERSION" --json url,assets -q '.url, .assets[].name'

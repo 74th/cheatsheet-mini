@@ -37,9 +37,9 @@ Gitタグを切り、ビルド済みアプリのzipをGitHub Releasesに添付�
    ditto -c -k --sequesterRsrc --keepParent "dist/CheatSheet Mini.app" "dist/CheatSheet-Mini-$VERSION.zip"
    ```
 
-4. アプリを起動し、メニューに `バージョン $VERSION` が表示されることを確認します。問題があれば `git tag -d "$VERSION"` でタグを消してやり直します。
+   `plutil` で確認したバージョンが `$VERSION` と違う（`-dirty` や `-g<sha>` が付いている）場合は、`git tag -d "$VERSION"` でタグを消してやり直します。
 
-5. タグをpushし、zipを添付したリリースを作ります。
+4. タグをpushし、zipを添付したリリースを作ります。
 
    ```bash
    git push origin "$VERSION"
