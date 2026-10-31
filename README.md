@@ -114,10 +114,6 @@ Xcodeでは `Package.swift` を開き、ソースを閲覧・編集できます�
 - App Sandboxを有効にしていない個人用ビルドを想定しています。選択フォルダはSecurity-Scoped Bookmarkで保持します。
 - Markdown内の生HTMLは、対応する画像タグを除きDownのデフォルト安全設定に従います。信頼できるローカル文書を対象としてください。
 
-## リリース
-
-リリースはGitタグ（例: `0.2.0`、`v` は付けない）を切り、ビルド済みアプリのzipをGitHub Releasesに添付して作成します。バージョンはGitタグで決まり、`build-app.sh` がビルド時にアプリ内の `Info.plist` へ書き込んでメニューに表示します（タグのないコミットでは `0.1.0-12-gea044fd` のように表示）。リリースのためにバージョンを書き換えるコミットは不要です。手順はスキル `release`（[.claude/skills/release/SKILL.md](.claude/skills/release/SKILL.md)）にまとめています。
-
 ## 仕様と今後の変更
 
 基本仕様は [openspec/specs](openspec/specs/) で管理します。
