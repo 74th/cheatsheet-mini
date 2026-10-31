@@ -12,6 +12,17 @@ struct Entry: Identifiable, Equatable {
     let heading: String
     let markdown: String
     let fileURL: URL
+    // Normalized once at indexing so body search stays fast while typing.
+    let searchableMarkdown: String
+    init(id: String, fileName: String, documentTitle: String, heading: String, markdown: String, fileURL: URL) {
+        self.id = id
+        self.fileName = fileName
+        self.documentTitle = documentTitle
+        self.heading = heading
+        self.markdown = markdown
+        self.fileURL = fileURL
+        searchableMarkdown = normalize(markdown)
+    }
     static func == (lhs: Entry, rhs: Entry) -> Bool { lhs.id == rhs.id && lhs.markdown == rhs.markdown }
 }
 
@@ -104,30 +115,44 @@ private func textScore(_ rawNeedle: String, _ rawText: String) -> Int {
 func rank(_ query: String, entries: [Entry]) -> [Entry] {
     let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return entries }
-    let dotParts = trimmed.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
-    let hasFileFilter = dotParts.count == 2
-    let filePart = hasFileFilter ? dotParts[0] : ""
-    let headingPart = hasFileFilter ? dotParts[1] : trimmed
+    // The first "." or ":" splits the file part. "." matches file names loosely; ":" limits to one exact file name.
+    let separator = trimmed.firstIndex(where: { $0 == "." || $0 == ":" })
+    let hasFileFilter = separator != nil
+    let isExactFile = separator.map { trimmed[$0] == ":" } ?? false
+    let filePart = separator.map { String(trimmed[..<$0]) } ?? ""
+    let headingPart = separator.map { String(trimmed[trimmed.index(after: $0)...]) } ?? trimmed
     let tokens = headingPart.split(whereSeparator: \.isWhitespace).map(String.init)
-    return entries.compactMap { entry -> (Entry, Int)? in
+    // Entries found only through the body rank after every heading match.
+    return entries.compactMap { entry -> (Entry, Int, Bool)? in
         var total = 0
-        if hasFileFilter {
+        var usesBody = false
+        if isExactFile {
+            guard normalize(filePart) == normalize(entry.fileName) else { return nil }
+        } else if hasFileFilter {
             let fileScore = textScore(filePart, entry.fileName)
             guard fileScore > 0 else { return nil }
             total += fileScore * 3
         }
-        if tokens.isEmpty { return (entry, total) }
+        if tokens.isEmpty { return (entry, total, false) }
         for token in tokens {
             let headingScore = textScore(token, entry.heading)
             let titleScore = textScore(token, entry.documentTitle) / 2
             let filenameScore = hasFileFilter ? 0 : textScore(token, entry.fileName) / 2
             let best = max(headingScore, titleScore, filenameScore)
-            guard best > 0 else { return nil }
-            total += best
+            if best > 0 {
+                total += best
+            } else if entry.searchableMarkdown.contains(normalize(token)) {
+                usesBody = true
+            } else {
+                return nil
+            }
         }
-        return (entry, total)
+        return (entry, total, usesBody)
     }
-    .sorted { $0.1 == $1.1 ? $0.0.heading < $1.0.heading : $0.1 > $1.1 }
+    .sorted {
+        if $0.2 != $1.2 { return !$0.2 }
+        return $0.1 == $1.1 ? $0.0.heading < $1.0.heading : $0.1 > $1.1
+    }
     .map(\.0)
 }
 
