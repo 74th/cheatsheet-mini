@@ -283,11 +283,47 @@ func embedLocalImages(in html: String, relativeTo fileURL: URL) -> String {
     return result
 }
 
+// The page has no clipboard access when loaded from an HTML string, so the
+// copy button hands the code text to the app.
+private final class CodeCopyHandler: NSObject, WKScriptMessageHandler {
+    static let name = "copyCode"
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard let text = message.body as? String else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+}
+
+private let codeCopyScript = """
+document.querySelectorAll('pre').forEach(pre => {
+    const button = document.createElement('button');
+    button.className = 'copy-code';
+    button.type = 'button';
+    button.textContent = 'コピー';
+    button.addEventListener('click', () => {
+        // Drop the final newline so pasting a command does not run it.
+        const code = (pre.querySelector('code') || pre).textContent.replace(/\n$/, '');
+        window.webkit.messageHandlers.\(CodeCopyHandler.name).postMessage(code);
+        button.textContent = 'コピーしました';
+        clearTimeout(button.resetTimer);
+        button.resetTimer = setTimeout(() => { button.textContent = 'コピー'; }, 1500);
+    });
+    const block = document.createElement('div');
+    block.className = 'code-block';
+    pre.replaceWith(block);
+    block.append(pre, button);
+});
+"""
+
 struct MarkdownPreview: NSViewRepresentable {
     let entry: Entry?
     func makeNSView(context: Context) -> WKWebView {
-        let view = WKWebView()
-        return view
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.add(CodeCopyHandler(), name: CodeCopyHandler.name)
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: codeCopyScript, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        )
+        return WKWebView(frame: .zero, configuration: configuration)
     }
     func updateNSView(_ view: WKWebView, context: Context) {
         guard let entry else {
@@ -300,6 +336,8 @@ struct MarkdownPreview: NSViewRepresentable {
         :root { color-scheme: light dark; }
         body { font: 14px/1.65 -apple-system, BlinkMacSystemFont, sans-serif; padding: 14px 24px; overflow-wrap: anywhere; }
         h2 { font-size: 19px; } pre { padding: 13px; overflow-x: auto; border-radius: 8px; background: rgba(130,130,130,.13); }
+        .code-block { position: relative; } .copy-code { position: absolute; top: 6px; right: 6px; font: 11px -apple-system, sans-serif; padding: 2px 8px; border: 1px solid #9996; border-radius: 5px; background: Canvas; color: CanvasText; cursor: pointer; opacity: 0; }
+        pre:hover + .copy-code, .copy-code:hover, .copy-code:focus { opacity: .85; }
         code { font-family: ui-monospace, Menlo, monospace; } :not(pre)>code { padding: 2px 4px; background: rgba(130,130,130,.13); }
         img { max-width: 100%; height: auto; } table { border-collapse: collapse; } td, th { border: 1px solid #9996; padding: 5px 10px; }
         a { color: #338bd1; }
