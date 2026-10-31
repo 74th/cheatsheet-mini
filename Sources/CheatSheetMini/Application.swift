@@ -382,7 +382,7 @@ struct SearchView: View {
         .onAppear { focused = true }
         .onChange(of: store.entries) { _ in selection = results.first?.id }
         .onReceive(NotificationCenter.default.publisher(for: .cheatSheetShow)) { _ in
-            resetSearch()
+            focusSearchField()
         }
         .onReceive(NotificationCenter.default.publisher(for: .cheatSheetClearSearch)) { notification in
             guard notification.object as? UUID == commandTarget else { return }
@@ -402,6 +402,11 @@ struct SearchView: View {
     private func resetSearch() {
         query = ""
         selection = results.first?.id
+        focusSearchField()
+    }
+
+    // Keeps the query and selection so a re-shown panel continues where it left off.
+    private func focusSearchField() {
         resultsFocused = false
         // Clear the results focus before returning to the native field editor.
         // This also works when the query was already empty.
@@ -477,6 +482,8 @@ private func statusBarIcon() -> NSImage? {
         panel.title = "CheatSheet Mini"
         panel.isReleasedWhenClosed = false
         panel.isFloatingPanel = true
+        // Stay visible while working in other apps; only the shortcut, Esc or close hides it.
+        panel.hidesOnDeactivate = false
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.center()
@@ -502,7 +509,7 @@ private func statusBarIcon() -> NSImage? {
             button.setAccessibilityLabel("CheatSheet Mini")
         }
         let menu = NSMenu()
-        let searchItem = NSMenuItem(title: "検索を開く", action: #selector(togglePanel), keyEquivalent: "")
+        let searchItem = NSMenuItem(title: "検索を開く", action: #selector(showPanel), keyEquivalent: "")
         searchMenuItem = searchItem
         menu.addItem(searchItem)
         menu.addItem(NSMenuItem(title: "設定…", action: #selector(openSettings), keyEquivalent: ","))
@@ -600,9 +607,7 @@ private func statusBarIcon() -> NSImage? {
     @objc private func refreshNow() { store.scan(force: true) }
     @objc private func quit() { NSApp.terminate(nil) }
 
-    @objc func togglePanel() {
-        if panel.isVisible { panel.orderOut(nil); return }
-        panel.center()
+    @objc func showPanel() {
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         NotificationCenter.default.post(name: .cheatSheetShow, object: nil)
@@ -619,7 +624,7 @@ private func statusBarIcon() -> NSImage? {
             guard result == noErr, keyID.signature == hotkeySignature else { return OSStatus(eventNotHandledErr) }
             let controller = Unmanaged<ApplicationController>.fromOpaque(context).takeUnretainedValue()
             DispatchQueue.main.async {
-                if controller.shortcuts.activeID == keyID.id { controller.togglePanel() }
+                if controller.shortcuts.activeID == keyID.id { controller.showPanel() }
             }
             return noErr
         }, 1, [spec], opaque, &hotkeyHandler)
