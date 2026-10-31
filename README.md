@@ -6,13 +6,39 @@
 
 <img src="docs/screen-sample.png" width="600" />
 
+## ダウンロードして使う
+
+[Releases](https://github.com/74th/cheatsheet-mini/releases) から `CheatSheet-Mini-<バージョン>.zip` をダウンロードし、展開した `CheatSheet Mini.app` を「アプリケーション」フォルダへ移動します。配布しているアプリはApple Silicon（arm64）用です。
+
+このアプリはAppleの公証（Notarization）を受けていないため、初回はmacOSが起動を止めます。次のいずれかの手順で起動を許可してください（許可は初回だけ必要です）。
+
+**macOS 15（Sequoia）以降**
+
+1. `CheatSheet Mini.app` をダブルクリックします。「"CheatSheet Mini"は開いていません」と表示されたら「完了」を押して閉じます。
+2. 「システム設定」→「プライバシーとセキュリティ」を開き、下部の「セキュリティ」にある「"CheatSheet Mini"は…ブロックされました」の横の「このまま開く」を押します。
+3. 確認ダイアログで「このまま開く」を押し、ログインパスワード（またはTouch ID）で許可します。
+
+**macOS 14（Sonoma）以前**
+
+Finderで `CheatSheet Mini.app` をControlキーを押しながらクリック（右クリック）して「開く」を選び、表示されたダイアログで「開く」を押します。
+
+**ターミナルで許可する場合（どのバージョンでも可）**
+
+ダウンロード時に付く隔離属性を外すと、通常のアプリと同じように起動できます。
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/CheatSheet Mini.app"
+```
+
+起動後、メニューバーの文鳥＋本アイコンをクリックすると、メニューに使用中のバージョンが表示されます。
+
 ## 必要環境
 
 - macOS 13以上
 - XcodeとCommand Line Tools (`xcode-select -p`)
 - 初回ビルド時にGitHubへ接続できること（SwiftPMがOSSの[Down](https://github.com/johnxnguyen/Down)を取得するため）
 
-## 起動
+## ソースからビルドして起動
 
 ```bash
 cd CheatSheetMini
@@ -91,6 +117,10 @@ Xcodeでは `Package.swift` を開き、ソースを閲覧・編集できます�
 - 絶対パス画像、通常の相対リンクのファイルアクセス、強調表示付きコードなどは今後の拡張対象です。
 - App Sandboxを有効にしていない個人用ビルドを想定しています。選択フォルダはSecurity-Scoped Bookmarkで保持します。
 - Markdown内の生HTMLは、対応する画像タグを除きDownのデフォルト安全設定に従います。信頼できるローカル文書を対象としてください。
+
+## リリース
+
+リリースはGitタグ（例: `0.2.0`、`v` は付けない）を切り、ビルド済みアプリのzipをGitHub Releasesに添付して作成します。バージョンはGitタグで決まり、`build-app.sh` がビルド時にアプリ内の `Info.plist` へ書き込んでメニューに表示します（タグのないコミットでは `0.1.0-12-gea044fd` のように表示）。リリースのためにバージョンを書き換えるコミットは不要です。手順はスキル `release`（[.claude/skills/release/SKILL.md](.claude/skills/release/SKILL.md)）にまとめています。
 
 ## 仕様と今後の変更
 
