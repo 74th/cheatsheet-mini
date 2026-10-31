@@ -481,10 +481,11 @@ private func statusBarIcon() -> NSImage? {
                             backing: .buffered, defer: false)
         panel.title = "CheatSheet Mini"
         panel.isReleasedWhenClosed = false
-        panel.isFloatingPanel = true
-        // Stay visible while working in other apps; only the shortcut, Esc or close hides it.
+        // Behave like a normal window: stay visible while working in other apps,
+        // but let their windows come in front. The shortcut brings it back to the front.
+        panel.isFloatingPanel = false
         panel.hidesOnDeactivate = false
-        panel.level = .floating
+        panel.level = .normal
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.center()
         panel.contentView = NSHostingView(rootView: SearchView(
