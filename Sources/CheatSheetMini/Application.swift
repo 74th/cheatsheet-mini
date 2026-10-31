@@ -608,6 +608,12 @@ private func statusBarIcon() -> NSImage? {
     @objc private func refreshNow() { store.scan(force: true) }
     @objc private func quit() { NSApp.terminate(nil) }
 
+    // Hide only when the panel is in front; a panel behind other windows is brought forward.
+    func togglePanel() {
+        if panel.isVisible, NSApp.isActive, panel.isKeyWindow { panel.orderOut(nil); return }
+        showPanel()
+    }
+
     @objc func showPanel() {
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
@@ -625,7 +631,7 @@ private func statusBarIcon() -> NSImage? {
             guard result == noErr, keyID.signature == hotkeySignature else { return OSStatus(eventNotHandledErr) }
             let controller = Unmanaged<ApplicationController>.fromOpaque(context).takeUnretainedValue()
             DispatchQueue.main.async {
-                if controller.shortcuts.activeID == keyID.id { controller.showPanel() }
+                if controller.shortcuts.activeID == keyID.id { controller.togglePanel() }
             }
             return noErr
         }, 1, [spec], opaque, &hotkeyHandler)
