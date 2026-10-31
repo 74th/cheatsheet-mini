@@ -34,7 +34,8 @@ git switch -c fix/<short-name>   # 新機能なら feat/<short-name>
 ```bash
 swift build && swift test
 ./build-app.sh --no-open
-pkill -x CheatSheetMini; open "dist/CheatSheet Mini.app"
+pkill -x CheatSheetMini; while pgrep -x CheatSheetMini >/dev/null; do sleep 0.2; done
+open "dist/CheatSheet Mini.app"
 ```
 
 - `swift build` / `swift test` だけでは `dist/CheatSheet Mini.app` は更新されない。ユーザーはこのアプリで動作確認するので、必ずビルドし直して起動し直す。
