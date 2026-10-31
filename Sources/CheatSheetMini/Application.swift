@@ -343,7 +343,7 @@ struct MarkdownPreview: NSViewRepresentable {
         <!doctype html><html><head><meta charset="utf-8"><style>
         :root { color-scheme: light dark; }
         body { font: 14px/1.65 -apple-system, BlinkMacSystemFont, sans-serif; padding: 14px 24px; overflow-wrap: anywhere; }
-        h2 { font-size: 19px; } pre { padding: 13px; overflow-x: auto; border-radius: 8px; background: rgba(130,130,130,.13); }
+        h2 { font-size: 19px; } pre { padding: 13px; white-space: pre-wrap; border-radius: 8px; background: rgba(130,130,130,.13); }
         .code-block { position: relative; } .copy-code { position: absolute; top: 6px; right: 6px; display: flex; padding: 4px; border: 1px solid #9996; border-radius: 5px; background: Canvas; color: CanvasText; cursor: pointer; opacity: 0; transition: opacity .15s; }
         /* Shown only while the pointer is on the corner so it does not cover long lines. */
         .copy-code:hover, .copy-code:focus-visible, .copy-code.copied { opacity: 1; } .copy-code svg { width: 16px; height: 16px; }
