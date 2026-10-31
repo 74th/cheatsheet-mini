@@ -52,5 +52,7 @@ Gitタグを切り、ビルド済みアプリのzipをGitHub Releasesに添付�
 ## 配布物について
 
 - 添付するファイル名は `CheatSheet-Mini-<バージョン>.zip` です。
-- `swift build -c release` で作るためApple Silicon（arm64）用です。
+- `swift build -c release` で作るReleaseビルドで、Apple Silicon（arm64）専用です。Intel Macには対応しません。
+- 対応するのはmacOS 13以降です（`Info.plist` の `LSMinimumSystemVersion`）。
+- バンドルIDは `tech.74th.CheatSheetMini` です。設定はこのIDごとに保存されるため、変えると利用者の設定が消えます。
 - Developer ID署名とAppleの公証は行っていません（ad-hoc署名のみ）。そのため利用者は初回起動時に許可が必要です。
