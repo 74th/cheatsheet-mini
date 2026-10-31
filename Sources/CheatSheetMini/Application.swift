@@ -541,6 +541,15 @@ private func statusBarIcon() -> NSImage? {
     return image
 }
 
+/// Title of the status bar menu item that shows the app version from Info.plist.
+/// A `swift run` build has no Info.plist, so the version is unknown there.
+func versionMenuTitle(infoDictionary: [String: Any]?) -> String {
+    guard let version = infoDictionary?["CFBundleShortVersionString"] as? String, !version.isEmpty else {
+        return "バージョン 不明（開発ビルド）"
+    }
+    return "バージョン \(version)"
+}
+
 @MainActor final class ApplicationController: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuItemValidation {
     private var panel: NSPanel!
     private var statusItem: NSStatusItem!
@@ -599,6 +608,9 @@ private func statusBarIcon() -> NSImage? {
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "終了", action: #selector(quit), keyEquivalent: "q"))
         for item in menu.items { item.target = self }
+        // Informational only: no action keeps the item greyed out.
+        menu.insertItem(NSMenuItem(title: versionMenuTitle(infoDictionary: Bundle.main.infoDictionary), action: nil, keyEquivalent: ""), at: menu.items.count - 1)
+        menu.insertItem(.separator(), at: menu.items.count - 1)
         statusItem.menu = menu
         installHotkey()
         menuObservation = shortcuts.objectWillChange.sink { [weak self] _ in
