@@ -294,19 +294,24 @@ private final class CodeCopyHandler: NSObject, WKScriptMessageHandler {
     }
 }
 
-private let codeCopyScript = """
+// Icons from Tabler Icons v3.50.0 (MIT License, see THIRD_PARTY_NOTICES.md).
+private let copyIcon = #"<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 9.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667l0 -8.666"/><path d="M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1"/></svg>"#
+private let checkIcon = #"<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg>"#
+
+let codeCopyScript = """
 document.querySelectorAll('pre').forEach(pre => {
     const button = document.createElement('button');
     button.className = 'copy-code';
     button.type = 'button';
-    button.textContent = 'コピー';
+    const show = (icon, label) => { button.innerHTML = icon; button.title = label; button.ariaLabel = label; };
+    show(`\(copyIcon)`, 'コピー');
     button.addEventListener('click', () => {
         // Drop the final newline so pasting a command does not run it.
-        const code = (pre.querySelector('code') || pre).textContent.replace(/\n$/, '');
+        const code = (pre.querySelector('code') || pre).textContent.replace(/\\n$/, '');
         window.webkit.messageHandlers.\(CodeCopyHandler.name).postMessage(code);
-        button.textContent = 'コピーしました';
+        show(`\(checkIcon)`, 'コピーしました');
         clearTimeout(button.resetTimer);
-        button.resetTimer = setTimeout(() => { button.textContent = 'コピー'; }, 1500);
+        button.resetTimer = setTimeout(() => show(`\(copyIcon)`, 'コピー'), 1500);
     });
     const block = document.createElement('div');
     block.className = 'code-block';
@@ -336,8 +341,8 @@ struct MarkdownPreview: NSViewRepresentable {
         :root { color-scheme: light dark; }
         body { font: 14px/1.65 -apple-system, BlinkMacSystemFont, sans-serif; padding: 14px 24px; overflow-wrap: anywhere; }
         h2 { font-size: 19px; } pre { padding: 13px; overflow-x: auto; border-radius: 8px; background: rgba(130,130,130,.13); }
-        .code-block { position: relative; } .copy-code { position: absolute; top: 6px; right: 6px; font: 11px -apple-system, sans-serif; padding: 2px 8px; border: 1px solid #9996; border-radius: 5px; background: Canvas; color: CanvasText; cursor: pointer; opacity: 0; }
-        pre:hover + .copy-code, .copy-code:hover, .copy-code:focus { opacity: .85; }
+        .code-block { position: relative; } .copy-code { position: absolute; top: 6px; right: 6px; display: flex; padding: 4px; border: 1px solid #9996; border-radius: 5px; background: Canvas; color: CanvasText; cursor: pointer; opacity: .55; }
+        .copy-code:hover, .copy-code:focus { opacity: 1; } .copy-code svg { width: 16px; height: 16px; }
         code { font-family: ui-monospace, Menlo, monospace; } :not(pre)>code { padding: 2px 4px; background: rgba(130,130,130,.13); }
         img { max-width: 100%; height: auto; } table { border-collapse: collapse; } td, th { border: 1px solid #9996; padding: 5px 10px; }
         a { color: #338bd1; }
