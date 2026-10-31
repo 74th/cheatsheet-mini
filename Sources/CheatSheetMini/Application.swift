@@ -301,17 +301,20 @@ private let checkIcon = #"<svg viewBox="0 0 24 24" fill="none" stroke="currentCo
 let codeCopyScript = """
 document.querySelectorAll('pre').forEach(pre => {
     const button = document.createElement('button');
-    button.className = 'copy-code';
     button.type = 'button';
-    const show = (icon, label) => { button.innerHTML = icon; button.title = label; button.ariaLabel = label; };
-    show(`\(copyIcon)`, 'コピー');
+    const show = copied => {
+        button.innerHTML = copied ? `\(checkIcon)` : `\(copyIcon)`;
+        button.title = button.ariaLabel = copied ? 'コピーしました' : 'コピー';
+        button.className = copied ? 'copy-code copied' : 'copy-code';
+    };
+    show(false);
     button.addEventListener('click', () => {
         // Drop the final newline so pasting a command does not run it.
         const code = (pre.querySelector('code') || pre).textContent.replace(/\\n$/, '');
         window.webkit.messageHandlers.\(CodeCopyHandler.name).postMessage(code);
-        show(`\(checkIcon)`, 'コピーしました');
+        show(true);
         clearTimeout(button.resetTimer);
-        button.resetTimer = setTimeout(() => show(`\(copyIcon)`, 'コピー'), 1500);
+        button.resetTimer = setTimeout(() => show(false), 1500);
     });
     const block = document.createElement('div');
     block.className = 'code-block';
@@ -341,8 +344,9 @@ struct MarkdownPreview: NSViewRepresentable {
         :root { color-scheme: light dark; }
         body { font: 14px/1.65 -apple-system, BlinkMacSystemFont, sans-serif; padding: 14px 24px; overflow-wrap: anywhere; }
         h2 { font-size: 19px; } pre { padding: 13px; overflow-x: auto; border-radius: 8px; background: rgba(130,130,130,.13); }
-        .code-block { position: relative; } .copy-code { position: absolute; top: 6px; right: 6px; display: flex; padding: 4px; border: 1px solid #9996; border-radius: 5px; background: Canvas; color: CanvasText; cursor: pointer; opacity: .55; }
-        .copy-code:hover, .copy-code:focus { opacity: 1; } .copy-code svg { width: 16px; height: 16px; }
+        .code-block { position: relative; } .copy-code { position: absolute; top: 6px; right: 6px; display: flex; padding: 4px; border: 1px solid #9996; border-radius: 5px; background: Canvas; color: CanvasText; cursor: pointer; opacity: 0; transition: opacity .15s; }
+        /* Shown only while the pointer is on the corner so it does not cover long lines. */
+        .copy-code:hover, .copy-code:focus-visible, .copy-code.copied { opacity: 1; } .copy-code svg { width: 16px; height: 16px; }
         code { font-family: ui-monospace, Menlo, monospace; } :not(pre)>code { padding: 2px 4px; background: rgba(130,130,130,.13); }
         img { max-width: 100%; height: auto; } table { border-collapse: collapse; } td, th { border: 1px solid #9996; padding: 5px 10px; }
         a { color: #338bd1; }

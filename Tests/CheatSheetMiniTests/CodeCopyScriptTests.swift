@@ -31,9 +31,11 @@ final class CodeCopyScriptTests: XCTestCase {
         let button = try XCTUnwrap(context.evaluateScript("replaced.children[1]"))
         XCTAssertEqual(button.forProperty("title").toString(), "コピー")
         XCTAssertTrue(button.forProperty("innerHTML").toString().hasPrefix("<svg"))
+        XCTAssertEqual(button.forProperty("className").toString(), "copy-code")
         context.evaluateScript("replaced.children[1].listeners.click()")
         XCTAssertNil(exception, exception?.toString() ?? "")
         XCTAssertEqual(context.evaluateScript("copied").toArray() as? [String], ["gh auth token | sbx secret set github"])
         XCTAssertEqual(button.forProperty("title").toString(), "コピーしました")
+        XCTAssertEqual(button.forProperty("className").toString(), "copy-code copied")
     }
 }
