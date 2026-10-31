@@ -34,5 +34,6 @@ open "dist/CheatSheet Mini.app"
 
 スキルはClaude Code用の `.claude/skills/` とCodex用の `.agents/skills/` の両方に置いている。スキルを追加・変更するときは、必ず両方を同じ内容に更新すること。
 
-- 独自スキル: `issue-to-pr`（Issue対応からPR作成、レビュー、マージ、Issueクローズまで）、`release`（バージョン更新、タグ、ビルド済みアプリを添付したGitHub Release作成）
+- 独自スキル: `issue-to-pr`（Issue対応からPR作成、レビュー、マージ、Issueクローズまで）、`release`（タグ、ビルド済みアプリを添付したGitHub Release作成）
 - `openspec-*` スキルはOpenSpec CLIが生成するため手で編集しない
+- スキルの実行中にユーザーからスキルと違う指示（手順の省略・追加・変更）を受け、それが今後も続く方針なら、その場の作業に従ったうえでスキル（両方）を更新する。人間向けの同じ手順を書いたドキュメント（`release` なら `docs/release.md`）があれば、それも合わせて直す。一度きりの例外か判断できないときはユーザーに確認する
